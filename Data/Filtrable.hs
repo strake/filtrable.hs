@@ -7,6 +7,15 @@ import Control.Monad
 import Data.Proxy
 import Data.Traversable
 
+-- | Laws:
+--
+-- * @'mapMaybe' 'Just' = id@
+--
+-- * @'mapMaybe' f = 'catMaybes' ∘ 'fmap' f@
+--
+-- * @'catMaybes' = 'mapMaybe' id@
+--
+-- * @'filter' f = 'mapMaybe' ('liftA2' ('<$') id ('guard' ∘ f))@
 class Functor f => Filtrable f where
     {-# MINIMAL mapMaybe | catMaybes #-}
 
