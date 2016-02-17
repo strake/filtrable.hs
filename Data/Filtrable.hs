@@ -4,6 +4,7 @@ import Prelude hiding (filter)
 
 import Control.Applicative
 import Control.Monad
+import Data.Bool (bool)
 import Data.Proxy
 import Data.Traversable
 
@@ -15,7 +16,7 @@ import Data.Traversable
 --
 -- * @'catMaybes' = 'mapMaybe' id@
 --
--- * @'filter' f = 'mapMaybe' ('liftA2' ('<$') id ('guard' ∘ f))@
+-- * @'filter' f = 'mapMaybe' (\\ x -> 'bool' 'Nothing' ('Just' x) (f x))@
 class Functor f => Filtrable f where
     {-# MINIMAL mapMaybe | catMaybes #-}
 
