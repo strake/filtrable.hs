@@ -17,6 +17,8 @@ import Data.Traversable
 -- * @'catMaybes' = 'mapMaybe' id@
 --
 -- * @'filter' f = 'mapMaybe' (\\ x -> 'bool' 'Nothing' ('Just' x) (f x))@
+--
+-- * @'mapMaybe' g . 'mapMaybe' f = 'mapMaybe' (g '<=<' f)@
 class Functor f => Filtrable f where
     {-# MINIMAL mapMaybe | catMaybes #-}
 
