@@ -1,5 +1,5 @@
 name:                filtrable
-version:             0.1.0.4
+version:             0.1.0.5
 synopsis:            Class of filtrable containers
 homepage:            https://github.com/strake/filtrable.hs
 license:             BSD3
