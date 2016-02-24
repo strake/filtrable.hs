@@ -19,6 +19,10 @@ import Data.Traversable
 -- * @'filter' f = 'mapMaybe' (\\ x -> 'bool' 'Nothing' ('Just' x) (f x))@
 --
 -- * @'mapMaybe' g . 'mapMaybe' f = 'mapMaybe' (g '<=<' f)@
+--
+--   Laws if @'Foldable' f@:
+--
+-- * @'foldMap' g . 'filter' f = 'foldMap' (\\ x -> 'bool' 'mempty' (g x) (f x))@
 class Functor f => Filtrable f where
     {-# MINIMAL mapMaybe | catMaybes #-}
 
