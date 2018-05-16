@@ -41,6 +41,17 @@ class Functor f => Filtrable f where
     filterA :: (Traversable f, Applicative p) => (a -> p Bool) -> f a -> p (f a)
     filterA f = mapMaybeA (\ x -> (x <$) . guard <$> f x)
 
+    mapEither :: (a -> Either b c) -> f a -> (f b, f c)
+    mapEither f = (,) <$> mapMaybe (either Just (pure Nothing) . f)
+                      <*> mapMaybe (either (pure Nothing) Just . f)
+
+    mapEitherA :: (Traversable f, Applicative p) => (a -> p (Either b c)) -> f a -> p (f b, f c)
+    mapEitherA f = liftA2 (,) <$> mapMaybeA (fmap (Just `either` pure Nothing) . f)
+                              <*> mapMaybeA (fmap (pure Nothing `either` Just) . f)
+
+    partitionEithers :: f (Either a b) -> (f a, f b)
+    partitionEithers = mapEither id
+
 instance Filtrable [] where
     mapMaybe f = foldr (maybe id (:) . f) []
 
