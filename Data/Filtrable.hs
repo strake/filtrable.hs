@@ -1,4 +1,4 @@
-module Data.Filtrable where
+module Data.Filtrable (Filtrable (..)) where
 
 import Prelude hiding (filter)
 
@@ -33,10 +33,19 @@ class Functor f => Filtrable f where
     catMaybes = mapMaybe id
 
     filter :: (a -> Bool) -> f a -> f a
-    filter f = mapMaybe (liftA2 (<$) id (guard . f))
+    filter f = mapMaybe ((<$) <*> guard . f)
+
+    mapMaybeA :: (Traversable f, Applicative p) => (a -> p (Maybe b)) -> f a -> p (f b)
+    mapMaybeA f xs = catMaybes <$> traverse f xs
+
+    filterA :: (Traversable f, Applicative p) => (a -> p Bool) -> f a -> p (f a)
+    filterA f = mapMaybeA (\ x -> (x <$) . guard <$> f x)
 
 instance Filtrable [] where
     mapMaybe f = foldr (maybe id (:) . f) []
+
+    mapMaybeA _ [] = pure []
+    mapMaybeA f (x:xs) = maybe id (:) <$> f x <*> mapMaybeA f xs
 
 instance Filtrable Maybe where
     mapMaybe = (=<<)
@@ -47,9 +56,3 @@ instance Filtrable Proxy where
 
 instance Filtrable (Const a) where
     mapMaybe _ (Const x) = Const x
-
-mapMaybeA :: (Filtrable f, Traversable f, Applicative p) => (a -> p (Maybe b)) -> f a -> p (f b)
-mapMaybeA f xs = catMaybes <$> traverse f xs
-
-filterA :: (Filtrable f, Traversable f, Applicative p) => (a -> p Bool) -> f a -> p (f a)
-filterA f = mapMaybeA (\ x -> (x <$) . guard <$> f x)
