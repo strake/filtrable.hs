@@ -5,6 +5,9 @@ import Prelude hiding (filter)
 import Control.Applicative
 import Control.Monad
 import Data.Bool (bool)
+import Data.Functor.Compose
+import Data.Functor.Product
+import Data.Functor.Sum
 import Data.Proxy
 import Data.Traversable
 
@@ -67,3 +70,13 @@ instance Filtrable Proxy where
 
 instance Filtrable (Const a) where
     mapMaybe _ (Const x) = Const x
+
+instance (Filtrable f, Filtrable g) => Filtrable (Product f g) where
+    mapMaybe f (Pair as bs) = Pair (mapMaybe f as) (mapMaybe f bs)
+
+instance (Filtrable f, Filtrable g) => Filtrable (Sum f g) where
+    mapMaybe f (InL as) = InL (mapMaybe f as)
+    mapMaybe f (InR bs) = InR (mapMaybe f bs)
+
+instance (Functor f, Filtrable g) => Filtrable (Compose f g) where
+    mapMaybe f (Compose as) = Compose (mapMaybe f <$> as)
