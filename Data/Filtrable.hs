@@ -1,4 +1,4 @@
-module Data.Filtrable (Filtrable (..)) where
+module Data.Filtrable (Filtrable (..), (<$?>), (<*?>)) where
 
 import Prelude hiding (filter)
 
@@ -80,3 +80,11 @@ instance (Filtrable f, Filtrable g) => Filtrable (Sum f g) where
 
 instance (Functor f, Filtrable g) => Filtrable (Compose f g) where
     mapMaybe f (Compose as) = Compose (mapMaybe f <$> as)
+
+infixl 4 <$?>, <*?>
+
+(<$?>) :: Filtrable f => (a -> Maybe b) -> f a -> f b
+(<$?>) = mapMaybe
+
+(<*?>) :: (Applicative p, Filtrable p) => p (a -> Maybe b) -> p a -> p b
+f <*?> a = catMaybes (f <*> a)
