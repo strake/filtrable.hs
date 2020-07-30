@@ -1,15 +1,22 @@
-module Data.Filtrable (Filtrable (..), (<$?>), (<*?>)) where
+module Data.Filtrable
+  ( Filtrable (..)
+  , (<$?>), (<*?>)
+  , nub, nubBy, nubOrd, nubOrdBy
+  ) where
 
 import Prelude hiding (filter)
 
 import Control.Applicative
 import Control.Monad
+import qualified Control.Monad.Trans.State as M
 import Data.Bool (bool)
 import Data.Functor.Compose
 import Data.Functor.Product
 import Data.Functor.Sum
 import Data.Proxy
 import Data.Traversable
+
+import qualified Data.Set.Private as Set
 
 -- | Laws:
 --
@@ -88,3 +95,21 @@ infixl 4 <$?>, <*?>
 
 (<*?>) :: (Applicative p, Filtrable p) => p (a -> Maybe b) -> p a -> p b
 f <*?> a = catMaybes (f <*> a)
+
+nub :: (Filtrable f, Traversable f, Eq a) => f a -> f a
+nub = nubBy (==)
+
+nubBy :: (Filtrable f, Traversable f) => (a -> a -> Bool) -> f a -> f a
+nubBy eq = fmap (flip M.evalState []) . filterA $ \ a -> do
+    as <- M.get
+    let b = all (not . eq a) as
+    b <$ when b (M.modify (a:))
+
+nubOrd :: (Filtrable f, Traversable f, Ord a) => f a -> f a
+nubOrd = nubOrdBy compare
+
+nubOrdBy :: (Filtrable f, Traversable f) => (a -> a -> Ordering) -> f a -> f a
+nubOrdBy compare = fmap (flip M.evalState Set.empty) . filterA $ \ a -> M.state $ \ as ->
+    case Set.insertBy' compare a as of
+        Nothing -> (False, as)
+        Just as' -> (True, as')
