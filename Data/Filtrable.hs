@@ -92,11 +92,12 @@ instance (Filtrable f, Filtrable g) => Filtrable (Product f g) where
     mapMaybe f (Pair as bs) = Pair (mapMaybe f as) (mapMaybe f bs)
 
 instance (Filtrable f, Filtrable g) => Filtrable (Sum f g) where
-    mapMaybe f (InL as) = InL (mapMaybe f as)
-    mapMaybe f (InR bs) = InR (mapMaybe f bs)
+    mapMaybe f = \ case
+        InL as -> InL (mapMaybe f as)
+        InR bs -> InR (mapMaybe f bs)
 
 instance (Functor f, Filtrable g) => Filtrable (Compose f g) where
-    mapMaybe f (Compose as) = Compose (mapMaybe f <$> as)
+    mapMaybe f = Compose . (fmap . mapMaybe) f . getCompose
 
 infixl 4 <$?>, <*?>
 
