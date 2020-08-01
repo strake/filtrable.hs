@@ -7,11 +7,13 @@ module Data.Filtrable
 import Prelude hiding (filter)
 
 import Control.Applicative
+import Control.Applicative.Backwards
 import Control.Monad
 import qualified Control.Monad.Trans.State as M
 import Data.Bool (bool)
 import Data.Functor.Compose
 import Data.Functor.Product
+import Data.Functor.Reverse
 import Data.Functor.Sum
 import Data.Proxy
 import Data.Traversable
@@ -98,6 +100,12 @@ instance (Filtrable f, Filtrable g) => Filtrable (Sum f g) where
 
 instance (Functor f, Filtrable g) => Filtrable (Compose f g) where
     mapMaybe f = Compose . (fmap . mapMaybe) f . getCompose
+
+instance Filtrable f => Filtrable (Backwards f) where
+    mapMaybe f = Backwards . mapMaybe f . forwards
+
+instance Filtrable f => Filtrable (Reverse f) where
+    mapMaybe f = Reverse . mapMaybe f . getReverse
 
 infixl 4 <$?>, <*?>
 
