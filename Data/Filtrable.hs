@@ -1,3 +1,5 @@
+-- | See 'Filtrable'.
+
 module Data.Filtrable
   ( Filtrable (..)
   , (<$?>), (<*?>)
@@ -109,9 +111,11 @@ instance Filtrable f => Filtrable (Reverse f) where
 
 infixl 4 <$?>, <*?>
 
+-- | Infix synonym of 'mapMaybe'
 (<$?>) :: Filtrable f => (a -> Maybe b) -> f a -> f b
 (<$?>) = mapMaybe
 
+-- | @f '<*?>' a = 'catMaybes' (f '<*>' a)@
 (<*?>) :: (Applicative p, Filtrable p) => p (a -> Maybe b) -> p a -> p b
 f <*?> a = catMaybes (f <*> a)
 
