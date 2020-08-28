@@ -8,7 +8,7 @@ on:
 
 jobs:
   cabal:
-    name: ${{ matrix.os }} / GHC ${{ matrix.ghc }}
+    name: ${{ matrix.os }} / GHC ${{ matrix.ghc }} / ${{ matrix.flag-containers }}containers
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -19,6 +19,7 @@ jobs:
           - "8.8.3"
           - "8.10.1"
         exclude: []
+        flag-containers: ["-", "+"]
 
     steps:
     - uses: actions/checkout@v2
@@ -33,7 +34,7 @@ jobs:
 
     - name: Freeze
       run: |
-        cabal freeze
+        cabal freeze -f"${{ matrix.flag-containers }}containers"
 
     - uses: actions/cache@v1
       name: Cache ~/.cabal/store
@@ -43,8 +44,8 @@ jobs:
 
     - name: Build
       run: |
-        cabal configure --enable-tests --enable-benchmarks --test-show-details=direct
-        cabal build all
+        cabal configure --enable-tests --enable-benchmarks --test-show-details=direct -f"${{ matrix.flag-containers }}containers"
+        cabal build -f"${{ matrix.flag-containers }}containers" all
 
     - name: Test
       run: |
