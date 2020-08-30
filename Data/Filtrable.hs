@@ -1,5 +1,6 @@
--- | See 'Filtrable'.
+{-# LANGUAGE CPP #-}
 
+-- | See 'Filtrable'.
 module Data.Filtrable
   ( Filtrable (..)
   , (<$?>), (<*?>)
@@ -19,6 +20,15 @@ import Data.Functor.Reverse
 import Data.Functor.Sum
 import Data.Proxy
 import Data.Traversable
+
+#ifdef MIN_VERSION_containers
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
+#endif
 
 import qualified Data.Set.Private as Set
 
@@ -144,3 +154,22 @@ nubOrdBy compare = fmap (flip M.evalState Set.empty) . filterA $ \ a -> M.state 
     case Set.insertBy' compare a as of
         Nothing -> (False, as)
         Just as' -> (True, as')
+
+#ifdef MIN_VERSION_containers
+instance Filtrable IntMap where
+    mapMaybe = IntMap.mapMaybe
+    mapEither = IntMap.mapEither
+    filter = IntMap.filter
+
+instance Ord k => Filtrable (Map k) where
+    mapMaybe = Map.mapMaybe
+    mapEither = Map.mapEither
+    filter = Map.filter
+
+instance Filtrable Seq where
+    mapMaybe f = go
+      where
+        go = \ case
+            Seq.Empty -> Seq.Empty
+            a Seq.:<| as -> maybe id (Seq.:<|) (f a) (go as)
+#endif
