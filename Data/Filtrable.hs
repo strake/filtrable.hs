@@ -54,6 +54,10 @@ class Functor f => Filtrable f where
     filter :: (a -> Bool) -> f a -> f a
     filter f = mapMaybe ((<$) <*> guard . f)
 
+    -- | Collect the elements for which the given predicate is 'True' and 'False' separately.
+    partition :: (a -> Bool) -> f a -> (f a, f a)
+    partition f = (,) <$> filter f <*> filter (not . f)
+
     -- | Traverse the container with the given function, dropping the elements for which it returns 'Nothing'.
     mapMaybeA :: (Traversable f, Applicative p) => (a -> p (Maybe b)) -> f a -> p (f b)
     mapMaybeA f xs = catMaybes <$> traverse f xs
@@ -61,6 +65,10 @@ class Functor f => Filtrable f where
     -- | Drop the elements for which the given predicate is 'False'.
     filterA :: (Traversable f, Applicative p) => (a -> p Bool) -> f a -> p (f a)
     filterA f = mapMaybeA (\ x -> (x <$) . guard <$> f x)
+
+    -- | Collect the elements for which the given predicate is 'True' and 'False' separately.
+    partitionA :: (Traversable f, Applicative p) => (a -> p Bool) -> f a -> p (f a, f a)
+    partitionA f = (fmap . mapEither) (uncurry . flip $ bool Right Left) . traverse (liftA2 fmap (,) f)
 
     -- | Map the container with the given function, collecting the 'Left's and the 'Right's separately.
     mapEither :: (a -> Either b c) -> f a -> (f b, f c)
