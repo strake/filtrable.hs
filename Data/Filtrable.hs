@@ -69,8 +69,7 @@ class Functor f => Filtrable f where
 
     -- | Traverse the container with the given function, collecting the 'Left's and the 'Right's separately.
     mapEitherA :: (Traversable f, Applicative p) => (a -> p (Either b c)) -> f a -> p (f b, f c)
-    mapEitherA f = liftA2 (,) <$> mapMaybeA (fmap (Just `either` pure Nothing) . f)
-                              <*> mapMaybeA (fmap (pure Nothing `either` Just) . f)
+    mapEitherA f = fmap partitionEithers . traverse f
 
     -- | @'partitionEithers' = 'mapEither' 'id'@
     partitionEithers :: f (Either a b) -> (f a, f b)
