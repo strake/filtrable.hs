@@ -89,6 +89,11 @@ instance Filtrable [] where
     mapMaybeA _ [] = pure []
     mapMaybeA f (x:xs) = maybe id (:) <$> f x <*> mapMaybeA f xs
 
+    mapEither f = foldr (either (first . (:)) (fmap . (:)) . f) ([], [])
+
+    mapEitherA _ [] = pure ([], [])
+    mapEitherA f (x:xs) = either (first . (:)) (fmap . (:)) <$> f x <*> mapEitherA f xs
+
 instance Filtrable Maybe where
     mapMaybe = (=<<)
     catMaybes = join
