@@ -1,17 +1,21 @@
--- | See 'Filtrable'.
+{-# LANGUAGE BlockArguments #-}
 
+-- | See 'Filtrable'.
 module Data.Filtrable
   ( Filtrable (..)
   , (<$?>), (<*?>)
   , nub, nubBy, nubOrd, nubOrdBy
   ) where
 
-import Prelude hiding (filter)
+import Prelude hiding (break, drop, dropWhile, filter, span, splitAt, take, takeWhile)
 
 import Control.Applicative
 import Control.Applicative.Backwards
+import Control.Arrow ((>>>))
 import Control.Monad
+import Control.Monad.Trans.State (evalState, state)
 import qualified Control.Monad.Trans.State as M
+import Data.Bifunctor (first)
 import Data.Bool (bool)
 import Data.Functor.Compose
 import Data.Functor.Product
@@ -83,6 +87,54 @@ class Functor f => Filtrable f where
     partitionEithers :: f (Either a b) -> (f a, f b)
     partitionEithers = mapEither id
 
+    -- | Map the container with the given function until it returns 'Nothing', returning
+    -- the elements for which it returned 'Just' and the rest separately.
+    spanJust :: (a -> Maybe b) -> f a -> (f b, f a)
+    spanJust f = fmap ((,) <*> f) >>> mapEither \ case
+        (a, Nothing) -> Right a
+        (_, Just b) -> Left b
+
+    -- | Traverse the container with the given function until it returns 'Nothing', returning
+    -- the elements for which it returned 'Just' and the rest separately.
+    spanJustA :: (Traversable f, Applicative p) => (a -> p (Maybe b)) -> f a -> p (f b, f a)
+    spanJustA f = traverse (liftA2 fmap (,) f) >>> (fmap . mapEither) \ case
+        (a, Nothing) -> Right a
+        (_, Just b) -> Left b
+
+    -- | @'takeWhileJust' f = 'fst' '.' 'spanJust' f@
+    takeWhileJust :: (a -> Maybe b) -> f a -> f b
+    takeWhileJust f = fst . spanJust f
+
+    -- | Collect the leading elements of the container for which the predicate is 'False', until
+    -- it first returns 'True', and the rest separately.
+    break :: (a -> Bool) -> f a -> (f a, f a)
+    break p = span (not . p)
+
+    -- | Collect the leading elements of the container for which the predicate is 'True', until
+    -- it first returns 'False', and the rest separately.
+    span :: (a -> Bool) -> f a -> (f a, f a)
+    span p = spanJust ((<$) <*> guard . p)
+
+    -- | @'takeWhile' p = 'fst' '.' 'span' p@
+    takeWhile :: (a -> Bool) -> f a -> f a
+    takeWhile p = fst . span p
+
+    -- | @'dropWhile' p = 'snd' '.' 'span' p@
+    dropWhile :: (a -> Bool) -> f a -> f a
+    dropWhile p = snd . span p
+
+    -- | Return a pair of the first @n@ elements and the remaining elements.
+    splitAt :: (Traversable f, Integral n) => n -> f a -> (f a, f a)
+    splitAt n = flip evalState 0 . partitionA \ _ -> state \ k -> (k < n, k + 1)
+
+    -- | @'take' n = 'fst' '.' 'splitAt' n@
+    take :: (Traversable f, Integral n) => n -> f a -> f a
+    take n = fst . splitAt n
+
+    -- | @'drop' n = 'snd' '.' 'splitAt' n@
+    drop :: (Traversable f, Integral n) => n -> f a -> f a
+    drop n = snd . splitAt n
+
 instance Filtrable [] where
     mapMaybe f = foldr (maybe id (:) . f) []
 
@@ -93,6 +145,10 @@ instance Filtrable [] where
 
     mapEitherA _ [] = pure ([], [])
     mapEitherA f (x:xs) = either (first . (:)) (fmap . (:)) <$> f x <*> mapEitherA f xs
+
+    spanJust f (a:as)
+      | Just b <- f a = (b:) `first` spanJust f as
+    spanJust _ as = ([], as)
 
 instance Filtrable Maybe where
     mapMaybe = (=<<)
@@ -139,7 +195,7 @@ nub = nubBy (==)
 -- | \(\mathcal{O}(n^2)\)
 -- Delete all but the first copy of each element, with the given relation.
 nubBy :: (Filtrable f, Traversable f) => (a -> a -> Bool) -> f a -> f a
-nubBy eq = fmap (flip M.evalState []) . filterA $ \ a -> do
+nubBy eq = fmap (flip evalState []) . filterA $ \ a -> do
     as <- M.get
     let b = all (not . eq a) as
     b <$ when b (M.modify (a:))
@@ -152,7 +208,7 @@ nubOrd = nubOrdBy compare
 -- | \(\mathcal{O}(n\;\mathrm{log}\;n)\)
 -- Delete all but the first copy of each element, with the given relation.
 nubOrdBy :: (Filtrable f, Traversable f) => (a -> a -> Ordering) -> f a -> f a
-nubOrdBy compare = fmap (flip M.evalState Set.empty) . filterA $ \ a -> M.state $ \ as ->
+nubOrdBy compare = fmap (flip evalState Set.empty) . filterA $ \ a -> state $ \ as ->
     case Set.insertBy' compare a as of
         Nothing -> (False, as)
         Just as' -> (True, as')
